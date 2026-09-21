@@ -9,21 +9,75 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Resolve yt-dlp binary path
-const YT_DLP_BIN = fs.existsSync('/usr/local/bin/yt-dlp') ? '/usr/local/bin/yt-dlp' : 'yt-dlp';
-const FFMPEG_BIN = fs.existsSync('/usr/bin/ffmpeg') ? '/usr/bin/ffmpeg' : 'ffmpeg';
-const NODE_BIN = fs.existsSync('/usr/bin/node') ? '/usr/bin/node' : process.execPath;
+// Multi-path resolver for binary tools (supports VPS, Docker, Railway, Render, local)
+function resolveBinary(preferredName: string, candidates: (string | undefined)[]): string {
+  for (const candidate of candidates) {
+    if (candidate && fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return preferredName;
+}
+
+let YT_DLP_BIN = resolveBinary('yt-dlp', [
+  process.env.YT_DLP_PATH,
+  '/usr/local/bin/yt-dlp',
+  '/usr/bin/yt-dlp',
+  '/tmp/yt-dlp',
+  path.join(process.cwd(), 'yt-dlp'),
+]);
+
+const FFMPEG_BIN = resolveBinary('ffmpeg', [
+  process.env.FFMPEG_PATH,
+  '/usr/bin/ffmpeg',
+  '/usr/local/bin/ffmpeg',
+  '/bin/ffmpeg',
+]);
+
+const NODE_BIN = resolveBinary('node', [
+  process.env.NODE_PATH,
+  '/usr/bin/node',
+  '/usr/local/bin/node',
+  process.execPath,
+]);
 
 let hasYtDlp = false;
 let hasFfmpeg = false;
+let ytDlpVersion = '';
+let ffmpegVersion = '';
 
-execFile(YT_DLP_BIN, ['--version'], (err) => {
-  hasYtDlp = !err;
-});
+function checkTools() {
+  execFile(YT_DLP_BIN, ['--version'], (err, stdout) => {
+    hasYtDlp = !err;
+    if (!err && stdout) {
+      ytDlpVersion = stdout.trim();
+    }
+  });
 
-execFile(FFMPEG_BIN, ['-version'], (err) => {
-  hasFfmpeg = !err;
-});
+  execFile(FFMPEG_BIN, ['-version'], (err, stdout) => {
+    hasFfmpeg = !err;
+    if (!err && stdout) {
+      ffmpegVersion = stdout.split('\n')[0].trim();
+    }
+  });
+}
+
+checkTools();
+
+// If yt-dlp is missing on Linux, automatically download standalone binary to /tmp/yt-dlp
+if (!fs.existsSync(YT_DLP_BIN) && process.platform === 'linux') {
+  execFile('curl', ['-sL', 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp', '-o', '/tmp/yt-dlp'], (err) => {
+    if (!err && fs.existsSync('/tmp/yt-dlp')) {
+      try {
+        fs.chmodSync('/tmp/yt-dlp', 0o755);
+        YT_DLP_BIN = '/tmp/yt-dlp';
+        checkTools();
+      } catch {
+        // ignore
+      }
+    }
+  });
+}
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
@@ -31,9 +85,51 @@ app.get('/api/health', (req: Request, res: Response) => {
     status: 'ok',
     hasYtDlp,
     hasFfmpeg,
+    ytDlpVersion: ytDlpVersion || 'Active',
+    ffmpegVersion: ffmpegVersion || 'Active',
     nodeVersion: process.version,
     platform: process.platform,
-    system: 'Ubuntu 22.04 LTS Compatible'
+    system: 'VidiLoad Production Engine (Ready for Live Testing)',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Diagnostic & Live Test API
+app.get('/api/test-diagnostic', (req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    serverTime: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    environment: {
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      pid: process.pid,
+      memoryRssMb: Math.round(process.memoryUsage().rss / (1024 * 1024)),
+      memoryHeapMb: Math.round(process.memoryUsage().heapUsed / (1024 * 1024)),
+    },
+    tools: {
+      ytDlp: {
+        installed: hasYtDlp,
+        binaryPath: YT_DLP_BIN,
+        version: ytDlpVersion || 'Aktif',
+      },
+      ffmpeg: {
+        installed: hasFfmpeg,
+        binaryPath: FFMPEG_BIN,
+        version: ffmpegVersion || 'Aktif',
+      },
+      nodeRuntime: {
+        binaryPath: NODE_BIN,
+      }
+    },
+    liveTestEndpoints: {
+      health: 'GET /api/health',
+      videoInfo: 'POST /api/video-info (Body: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" })',
+      downloadStream: 'GET /api/download?url=...&format=mp4&quality=best',
+    },
+    readyForTesting: hasYtDlp && hasFfmpeg
   });
 });
 

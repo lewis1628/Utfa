@@ -298,6 +298,13 @@ export const YouTubePage: React.FC<YouTubePageProps> = ({ initialUrl = '', onNav
             </button>
             <button
               type="button"
+              onClick={() => handleFillSample('https://www.youtube.com/shorts/kJQP7kiw5Fk')}
+              className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-red-300 border border-white/5 transition-colors font-medium text-[11px]"
+            >
+              Shorts Dikey Video
+            </button>
+            <button
+              type="button"
               onClick={() => handleFillSample('https://www.youtube.com/watch?v=jfKfPfyJRdk')}
               className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-amber-300 border border-white/5 transition-colors font-medium text-[11px]"
             >

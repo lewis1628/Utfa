@@ -11,6 +11,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { VpsGuidePage } from './pages/VpsGuidePage';
 import { HistoryPage } from './pages/HistoryPage';
+import { LiveTestPanel } from './components/LiveTestPanel';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [historyCount, setHistoryCount] = useState<number>(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isTestPanelOpen, setIsTestPanelOpen] = useState<boolean>(false);
 
   useEffect(() => {
     // Load stored user and history
@@ -64,6 +66,7 @@ export default function App() {
         currentUser={currentUser}
         historyCount={historyCount}
         onOpenSidebar={() => setIsSidebarOpen(true)}
+        onOpenTestPanel={() => setIsTestPanelOpen(true)}
       />
 
       {/* Electric Slide-over Sidebar on the Right (Reels Style ⚡) */}
@@ -132,6 +135,16 @@ export default function App() {
 
       {/* Footer */}
       <Footer onNavigate={handleNavigate} />
+
+      {/* Live Test & Server Diagnostic Panel (for GitHub & Live Testing) */}
+      <LiveTestPanel
+        isOpen={isTestPanelOpen}
+        onClose={() => setIsTestPanelOpen(false)}
+        onSelectTestUrl={(testUrl, platform) => {
+          setIsTestPanelOpen(false);
+          handleNavigate(platform === 'youtube' ? 'youtube' : 'social', testUrl);
+        }}
+      />
 
     </div>
   );

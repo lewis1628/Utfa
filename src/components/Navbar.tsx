@@ -6,7 +6,8 @@ import {
   LogIn, 
   UserPlus, 
   Zap,
-  Menu
+  Menu,
+  Activity
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -15,6 +16,7 @@ interface NavbarProps {
   currentUser: User | null;
   historyCount: number;
   onOpenSidebar: () => void;
+  onOpenTestPanel?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,6 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   historyCount,
   onOpenSidebar,
+  onOpenTestPanel,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-[#090b10]/95 backdrop-blur-xl border-b border-white/[0.08]">
@@ -85,9 +88,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          {/* Right: History + User + Electric Menu Trigger */}
+          {/* Right: History + Live Test + User + Electric Menu Trigger */}
           <div className="flex items-center gap-2 sm:gap-3">
             
+            {/* Live Test Center Button */}
+            {onOpenTestPanel && (
+              <button
+                id="nav-test-panel-btn"
+                onClick={onOpenTestPanel}
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                title="Canlı Test & Sunucu Teşhisi"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="hidden sm:inline">Canlı Test</span>
+                <span className="sm:hidden">Test</span>
+              </button>
+            )}
+
             {/* Download History Shortcut */}
             <button
               id="nav-history-btn"
